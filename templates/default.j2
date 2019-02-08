@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+
+{% if docker_listen_interfaces %}
+DOCKER_OPTS="
+{%- for interface in docker_listen_interfaces -%}
+-H {{ interface }}
+{%- if not loop.last -%}
+{{' '}}
+{%- endif -%}
+{%- endfor -%} "
+{% endif %}
+
+{% if os_proxy is defined %}
+export http_proxy="{{ os_proxy }}"
+{% endif %}

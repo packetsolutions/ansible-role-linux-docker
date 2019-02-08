@@ -1,0 +1,7 @@
+docker_prerequisite_packages:
+  - {package: "apt-transport-https"}
+  - {package: "ca-certificates"}
+  - {package: "curl"}
+  - {package: "software-properties-common"}
+  - {package: "linux-image-extra-{{ ansible_kernel }}"}
+  - {package: "linux-image-extra-virtual"}

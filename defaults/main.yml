@@ -1,0 +1,9 @@
+---
+# defaults file for docker-ce-ansible-role
+
+docker_state: present
+docker_listen_interfaces: []
+docker_allow_external_icc: false
+docker_cleanup_file: 'docker-cleanup'
+docker_cleanup_frequency: 'weekly'
+docker_cleanup_enabled: false

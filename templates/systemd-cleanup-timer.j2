@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Cleanup docker
+
+[Timer]
+OnCalendar={{ docker_cleanup_frequency }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

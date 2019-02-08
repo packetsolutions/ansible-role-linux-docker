@@ -1,0 +1,110 @@
+---
+- name: 'set os variables'
+  include_vars: '{{ item }}'
+  with_first_found:
+   - '{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml'
+   - '{{ ansible_distribution | lower }}.yml'
+   - '{{ ansible_os_family | lower }}.yml'
+
+- name: 'ubuntu | install docker-ce'
+  include: install-docker-ubuntu.yml
+  when: ansible_distribution == 'Ubuntu'
+
+- name: 'defaults | set /etc/defaults'
+  template:
+    src: 'default.j2'
+    dest: '/etc/default/docker'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  notify: 'restart docker'
+  become: yes
+  when: ansible_service_mgr != "systemd"
+
+- name: 'systemd | create unit folder'
+  file:
+    path: '/etc/systemd/system/docker.service.d'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+    state: directory
+  become: yes
+  when: ansible_service_mgr == "systemd"
+
+- name: 'systemd | override proxy'
+  template:
+    src: systemd-proxy.j2
+    dest: /etc/systemd/system/docker.service.d/proxy.conf
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  notify: 'reload systemd'
+  become: yes
+  when:
+    - os_proxy is defined
+    - ansible_service_mgr == "systemd"
+
+- name: 'systemd | override interfaces'
+  template:
+    src: systemd-interfaces.j2
+    dest: /etc/systemd/system/docker.service.d/interfaces.conf
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  notify: 'reload systemd'
+  become: yes
+  when:
+    - docker_listen_interfaces
+    - ansible_service_mgr == "systemd"
+
+- name: 'systemd | startup'
+  systemd:
+    name: docker.service
+    enabled: yes
+  become: yes
+  when: ansible_service_mgr == "systemd"
+
+- name: 'system | enable docker ce on startup'
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: 'cleanup | setup cleanup'
+  include: cleanup.yml
+
+- name: 'iptables | block docker external icc docker jump'
+  iptables:
+    chain: DOCKER-USER
+    action: insert
+    jump: DOCKER
+    state: absent
+  become: yes
+  when: docker_allow_external_icc == false
+
+- name: 'iptables | block docker external icc related'
+  iptables:
+    chain: DOCKER-USER
+    ctstate: ['ESTABLISHED', 'RELATED']
+    action: insert
+    jump: ACCEPT
+    state: absent
+  become: yes
+  when: docker_allow_external_icc == false
+
+- name: 'iptables | allow docker external icc docker jump'
+  iptables:
+    chain: DOCKER-USER
+    action: insert
+    jump: DOCKER
+  become: yes
+  when: docker_allow_external_icc == true
+
+- name: 'iptables | allow docker external icc related'
+  iptables:
+    chain: DOCKER-USER
+    ctstate: ['ESTABLISHED', 'RELATED']
+    action: insert
+    jump: ACCEPT
+  become: yes
+  when: docker_allow_external_icc == true

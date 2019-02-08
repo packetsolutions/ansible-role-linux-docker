@@ -1,0 +1,92 @@
+---
+- name: 'cleanup | copy file'
+  copy:
+    src: 'docker-cleanup'
+    dest: '/usr/local/bin/{{ docker_cleanup_file }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0700'
+  when: docker_cleanup_enabled == true
+  become: yes
+
+- name: 'cleanup | remove file'
+  file:
+    path: '/usr/local/bin/{{ docker_cleanup_file }}'
+    state: 'absent'
+  become: yes
+  when: docker_cleanup_enabled == false
+
+- name: 'cleanup | add cron'
+  file:
+    src: '/usr/local/bin/{{ docker_cleanup_file }}'
+    dest: '/etc/cron.{{ docker_cleanup_frequency }}/{{ docker_cleanup_file }}'
+    state: link
+  become: yes
+  when:
+    - ansible_service_mgr != "systemd"
+    - docker_cleanup_enabled == true
+
+- name: 'cleanup | remove cron'
+  file:
+    path: '/etc/cron.{{ docker_cleanup_frequency }}/{{ docker_cleanup_file }}'
+    state: absent
+  become: yes
+  when:
+    - ansible_service_mgr != "systemd"
+    - docker_cleanup_enabled == false
+
+- name: 'cleanup | systemd | add timer'
+  template:
+    src: 'systemd-cleanup-timer.j2'
+    dest: '/etc/systemd/system/{{ docker_cleanup_file }}.timer'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  become: yes
+  when:
+    - ansible_service_mgr == "systemd"
+    - docker_cleanup_enabled == true
+  notify: 'systemd start docker-cleanup'
+
+- name: 'cleanup | systemd | add service'
+  template:
+    src: 'systemd-cleanup-service.j2'
+    dest: '/etc/systemd/system/{{ docker_cleanup_file }}.service'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  become: yes
+  when:
+    - ansible_service_mgr == "systemd"
+    - docker_cleanup_enabled == true
+  notify: 'systemd start docker-cleanup'
+
+- name: 'cleanup | systemd | remove service'
+  file:
+    path: '/etc/systemd/system/{{ docker_cleanup_file }}.service'
+    state: absent
+  become: yes
+  when:
+    - ansible_service_mgr == "systemd"
+    - docker_cleanup_enabled == false
+  register: systemd_docker_cleanup_result
+
+- name: 'cleanup | systemd | stop service'
+  systemd:
+    name: '{{ docker_cleanup_file }}.timer'
+    state: stopped
+    daemon_reload: yes
+  become: yes
+  when:
+    - ansible_service_mgr == "systemd"
+    - docker_cleanup_enabled == false
+    - systemd_docker_cleanup_result.changed
+
+- name: 'cleanup | systemd | remove timer'
+  file:
+    path: '/etc/systemd/system/{{ docker_cleanup_file }}.timer'
+    state: absent
+  become: yes
+  when:
+    - ansible_service_mgr == "systemd"
+    - docker_cleanup_enabled == false

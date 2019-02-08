@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Cleanup docker
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/{{ docker_cleanup_file }}
+User=root
+Group=root

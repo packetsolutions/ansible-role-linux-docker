@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+
+#stop running containers
+docker ps -a |\
+  grep 'Exited' |\
+  tr -s ' ' |\
+  cut -f1 -d' ' |\
+  xargs -r -n1 docker rm
+
+#prune
+docker image prune -f
+docker volume prune -f
+docker network prune -f
+
+#cleanup images
+docker image ls --format "{{.Repository}}:{{.Tag}}" |\
+  grep -v gitlab/gitlab-runner:alpine |\
+  xargs -r docker rmi
