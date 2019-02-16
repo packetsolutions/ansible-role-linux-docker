@@ -32,7 +32,8 @@
 
 - name: 'ubuntu | install docker ce'
   apt:
-    name: docker-ce
+    name: "{{ item }}"
     state: present
     update_cache: yes
+  with_items: "{{ docker_packages_debian }}"
   become: yes
