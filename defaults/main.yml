@@ -7,3 +7,5 @@ docker_allow_external_icc: false
 docker_cleanup_file: 'docker-cleanup'
 docker_cleanup_frequency: 'weekly'
 docker_cleanup_enabled: false
+docker_packages_debian:
+  - docker-ce
